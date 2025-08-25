@@ -5,11 +5,11 @@ https://blog.csdn.net/qq_30731313/article/details/146071289
 def rope(x):
     batch_size, seq_len, head_dim = x.shape
     device = x.device
-
-    # 计算 theta，生成不同维度的频率
-    theta = 10000 ** (-torch.arange(0, head_dim, 2, device=device) / head_dim)
     # 生成位置索引
     pos = torch.arange(seq_len, device=device).unsqueeze(1)
+    # 计算 theta，生成不同维度的频率
+    theta = 10000 ** (-torch.arange(0, head_dim, 2, device=device) / head_dim)
+
     # 计算旋转角度
     angles = pos * theta
 

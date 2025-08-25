@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+#Residual Quantization K-means
 class RQKMeans(torch.nn.Module):
     def __init__(self, dim, num_levels=3, codebook_size=256, kmeans_iters=10):
         super().__init__()
@@ -50,11 +51,12 @@ class RQKMeans(torch.nn.Module):
             kmeans = KMeans(n_clusters=self.codebook_size, n_init=1, max_iter=self.kmeans_iters)
             kmeans.fit(x_np)
             centroids = torch.Tensor(kmeans.cluster_centers_)  # (K, D)
+            centroids_np = centroids.numpy()    
             with torch.no_grad():
                 self.codebooks[l].copy_(centroids)
             # 更新 residual
             labels = kmeans.predict(x_np)
-            x_np = x_np - centroids[labels]
+            x_np = x_np - centroids_np[labels]
 
 # 使用示例
 if __name__ == "__main__":
