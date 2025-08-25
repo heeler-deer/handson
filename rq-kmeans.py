@@ -41,6 +41,8 @@ class RQKMeans(torch.nn.Module):
         codes = torch.stack(codes, dim=1)  # (B, num_levels)
         return recon, codes
 
+    # 逐层用 K-means 把当前残差聚成 codebook_size 个中心，
+    # 再把残差减掉这些中心，得到下一层的新残差，依次完成 num_levels 层
     def kmeans_init(self, x):
         """
         可选：使用简单的 K-Means 初始化 codebook（每层）
