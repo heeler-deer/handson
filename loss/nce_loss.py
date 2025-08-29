@@ -23,7 +23,6 @@ def nce_loss(
     labels[:, 0] = 1.0  # 第一列是正样本
 
     # 使用带有 logits 的二元交叉熵损失，以获得更好的数值稳定性
-    # F.binary_cross_entropy_with_logits combines a Sigmoid layer and the BCELoss in one single class.
     loss = F.binary_cross_entropy_with_logits(classifier_logits, labels)
     
     return loss
