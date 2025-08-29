@@ -1,58 +1,43 @@
-class NumArray {
-private:
-    vector<int> nums;
-    vector<int> tree;
-    int prefixSum(int i){
-        int s=0;
-        for(;i>0;i&=i-1){
-            s+=tree[i];
-        }
-        return s;
-    }
+// https://leetcode.cn/discuss/post/mOr1u6/
 
+
+// 模板来源 https://leetcode.cn/circle/discuss/mOr1u6/
+// 根据题目用 FenwickTree<int> t(n) 或者 FenwickTree<long long> t(n) 初始化
+template<typename T>
+class FenwickTree {
+    vector<T> tree;
 
 public:
-    NumArray(vector<int>& nums) :nums(nums),tree(nums.size()+1){
-        for(int i=1;i<=nums.size();i++){
-            tree[i]+=nums[i-1];
-            int nxt=i+(i&-i);
-            if(nxt<=nums.size()){
-                tree[nxt]+=tree[i];
-            }
+    // 使用下标 1 到 n
+    FenwickTree(int n) : tree(n + 1) {}
+
+    // a[i] 增加 val
+    // 1 <= i <= n
+    // 时间复杂度 O(log n)
+    void update(int i, T val) {
+        for (; i < tree.size(); i += i & -i) {
+            tree[i] += val;
         }
     }
-    
-    void update(int index, int val) {
-        int delta=val-nums[index];
-        nums[index]=val;
-        for(int i=index+1;i<tree.size();i+=i&-i){
-            tree[i]+=delta;
+
+    // 求前缀和 a[1] + ... + a[i]
+    // 1 <= i <= n
+    // 时间复杂度 O(log n)
+    T pre(int i) const {
+        T res = 0;
+        for (; i > 0; i &= i - 1) {
+            res += tree[i];
         }
+        return res;
     }
-    
-    int sumRange(int left, int right) {
-        return prefixSum(right+1)-prefixSum(left);
+
+    // 求区间和 a[l] + ... + a[r]
+    // 1 <= l <= r <= n
+    // 时间复杂度 O(log n)
+    T query(int l, int r) const {
+        if (r < l) {
+            return 0;
+        }
+        return pre(r) - pre(l - 1);
     }
 };
-
-// 每个下标 i 维护的值是 [i - (i & -i) + 1, i] 这个区间的前缀和。
-
-// i & -i 提取的是 i 的最低位的1所代表的值，比如：
-
-// i = 6 (110)，i & -i = 2
-
-// i = 8 (1000)，i & -i = 8
-
-
-
-
-// i &= (i - 1) 会消除最低位的 1
-// 这是在不断往上找“包含当前点的前缀区间”。
-
-// 例子：
-
-// i = 6 (110)，你加上 tree[6]，然后 i &= i - 1 → i = 4
-
-// tree[6] 是 [5,6] 的和，tree[4] 是 [1,4] 的和
-
-// 所以相加就得到了 [1,6] 的前缀和

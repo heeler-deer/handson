@@ -1,3 +1,5 @@
+// https://leetcode.cn/discuss/post/mOr1u6/
+
 class UnionFind {
     vector<int> fa; // 代表元
     vector<int> sz; // 集合大小
