@@ -6,11 +6,14 @@ def rope(x):
     batch_size, seq_len, head_dim = x.shape
     device = x.device
     # 生成位置索引
+    # pos.shape=(seq_len,1)
     pos = torch.arange(seq_len, device=device).unsqueeze(1)
     # 计算 theta，生成不同维度的频率
+    # theta.shape = (head_dim/2,)
     theta = 10000 ** (-torch.arange(0, head_dim, 2, device=device) / head_dim)
 
     # 计算旋转角度
+    # angles.shape=(seq_len,head_dim/2)
     angles = pos * theta
 
     # 计算 cos 和 sin
