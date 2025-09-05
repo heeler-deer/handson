@@ -2,15 +2,3 @@
 
 ## TODO
 
-mmoe.py
-
-对比学习损失,margin loss
-
-adam, SGD
-
-协同过滤、双塔，deepfm,din
-
-
-mlp前反向传播
-
-动态更新困难负样本
