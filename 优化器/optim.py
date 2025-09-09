@@ -12,7 +12,8 @@ class SGD:
         if self.v is None:
             self.v = [np.zeros_like(w) for w in params]
         for i, (w, g) in enumerate(zip(params, grads)):
-            g = g + self.wd * w                # L2正则
+            
+            g = g + self.wd * w                # L2正则（求导后）
             self.v[i] = self.mu * self.v[i] - self.lr * g
             w += self.v[i]
 
