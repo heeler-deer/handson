@@ -41,24 +41,8 @@ def softmax(x, axis=-1):
 def mish(x):
     return x * np.tanh(softplus(x))
 
-# 11. dice
-def dice_activation(x, axis=-1, epsilon=1e-8):
-    # 1. 沿指定轴计算均值和方差
-    # keepdims=True 确保均值和方差的形状能与 x 进行广播
-    mean = np.mean(x, axis=axis, keepdims=True)
-    variance = np.var(x, axis=axis, keepdims=True)
-    
-    # 2. 计算动态斜率 alpha (在公式中称为 p(s))
-    # 这是一个与 x 形状相同的数组
-    alpha = 1 / (1 + np.exp(-(x - mean) / np.sqrt(variance + epsilon)))
-    
-    # 3. 应用 Dice 激活函数
-    # 条件：x > 0
-    # 如果为 True，则值为 x
-    # 如果为 False，则值为 alpha * x
-    output = np.where(x > 0, x, alpha * x)
-    
-    return output
+
+
 
 
 x = np.array([-2.0, -0.5, 0.0, 1.0, 3.0])
