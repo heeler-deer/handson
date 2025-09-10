@@ -113,6 +113,46 @@ def fast_auc(label, pre):
 
 
 
+
+def gauc_with_fast_auc(y_true, y_pred, groups):
+
+
+    total_auc = 0.0
+    total_weight = 0.0
+
+    unique_groups = np.unique(groups)
+
+    for group_id in unique_groups:
+        mask = (groups == group_id)
+        
+        group_y_true = y_true[mask]
+        group_y_pred = y_pred[mask]
+        
+        group_weight = len(group_y_true)
+        
+        # 使用 fast_auc 计算分组AUC
+        # fast_auc 内部已经处理了边界情况
+        group_auc = fast_auc(group_y_true, group_y_pred)
+        
+        # 只有在AUC有效时（即 pos_num > 0 and neg_num > 0），才进行加权
+        if group_auc is not None and not np.isnan(group_auc):
+             # 确认 fast_auc 对单类别分组返回的是什么
+             # 假设它返回一个可识别的值，或者我们可以提前检查
+            if len(np.unique(group_y_true)) < 2:
+                continue
+
+            total_auc += group_auc * group_weight
+            total_weight += group_weight
+            
+    if total_weight == 0:
+        return 0.0
+
+    return total_auc / total_weight
+
+
+
+
+
 if __name__ == '__main__':
 
     y = np.array([1,0,0,0,1,0,1,0,])
@@ -124,3 +164,14 @@ if __name__ == '__main__':
     print("-----auc_calculate脚本:",auc_calculate(y,pred))
     print("-----AUC脚本:",AUC(y,pred))
     print("---fastauc",fast_auc(y,pred))
+    
+    
+    
+    
+    # 使用与之前相同的示例数据
+    y_true = np.array([1, 1, 0, 0,   1, 0, 1, 0,   0, 0, 1, 1,   1,   0, 0])
+    y_pred = np.array([0.9, 0.8, 0.2, 0.1,   0.5, 0.5, 0.5, 0.5,   0.1, 0.2, 0.8, 0.9,   0.7,   0.6, 0.7])
+    groups = np.array([1, 1, 1, 1,   2, 2, 2, 2,   3, 3, 3, 3,   4,   5, 5])
+
+    gauc_score_numpy = gauc_with_fast_auc(y_true, y_pred, groups)
+    print(f"\n使用纯 NumPy 计算的 GAUC: {gauc_score_numpy:.4f}")

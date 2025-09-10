@@ -13,6 +13,7 @@ def tanh(x):
     return np.tanh(x)
 
 # 4. Leaky ReLU
+# prelu的 \alpha 可以学习
 def leaky_relu(x, alpha=0.01):
     return np.where(x > 0, x, alpha * x)
 
