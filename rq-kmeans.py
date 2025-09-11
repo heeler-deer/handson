@@ -1,75 +1,62 @@
-import torch
-import torch.nn.functional as F
+import numpy as np
 
-#Residual Quantization K-means
-class RQKMeans(torch.nn.Module):
-    def __init__(self, dim, num_levels=3, codebook_size=256, kmeans_iters=10):
-        super().__init__()
-        self.dim = dim
-        self.num_levels = num_levels
-        self.codebook_size = codebook_size
-        self.kmeans_iters = kmeans_iters
-        # 初始化 codebooks，形状 (num_levels, codebook_size, dim)
-        self.codebooks = torch.nn.Parameter(torch.randn(num_levels, codebook_size, dim))
+def l2(x, y):
+    """x: [N,D]  y: [K,D]  ->  [N,K]"""
+    return np.sum((x[:, None, :] - y[None, :, :])**2, axis=2)
 
-    def forward(self, x):
-        """
-        输入:
-            x：形状 (B, dim)
-        输出:
-            recon: (B, dim) 重构后的向量
-            codes: (B, num_levels) 每层簇索引
-        """
-        B, D = x.shape
-        residual = x
-        codes = []
-        recon = 0
+def kmeans_once(X, K, n_iter=20):
+    """单次 KMeans，返回质心  [K,D] 与索引  [N]"""
+    N, D = X.shape
+    C = X[np.random.choice(N, K, replace=False)]   # 随机初始化
+    for _ in range(n_iter):
+        dist = l2(X, C)          # [N,K]
+        idx = dist.argmin(1)     # [N]
+        # 重新计算质心
+        for k in range(K):
+            mask = idx == k
+            if mask.sum():
+                C[k] = X[mask].mean(0)
+            else:                # 空簇重随机
+                C[k] = X[np.random.choice(N)]
+    return C, idx
 
-        for l in range(self.num_levels):
-            # 计算与当前 codebook 的距离
-            cb = self.codebooks[l]  # (K, D)
-            # 使用欧氏距离： (B, K)
-            dist = torch.cdist(residual, cb)
-            idx = torch.argmin(dist, dim=1)  # (B,)
-            codes.append(idx)
 
-            # 获取对应中心
-            selected = cb[idx]  # (B, D)
-            recon = recon + selected
-            residual = residual - selected  # 更新 residual
+def rq_kmeans(X, K, S=4, n_iter=10):
+    """
+    X: [N,D]  原始数据
+    K: 每级码本大小
+    S: 残差级数
+    return
+        codebooks: [S,K,D]  每级质心
+        indices:   [N,S]     每级最近邻索引
+        X_rec:     [N,D]     重建结果
+    """
+    N, D = X.shape
+    codebooks = np.zeros((S, K, D))
+    indices = np.zeros((N, S), dtype=int)
 
-        codes = torch.stack(codes, dim=1)  # (B, num_levels)
-        return recon, codes
+    residual = X.copy()
+    for s in range(S):
+        # 对当前残差做 KMeans
+        C, idx = kmeans_once(residual, K, n_iter)
+        codebooks[s] = C
+        indices[:, s] = idx
 
-    # 逐层用 K-means 把当前残差聚成 codebook_size 个中心，
-    # 再把残差减掉这些中心，得到下一层的新残差，依次完成 num_levels 层
-    def kmeans_init(self, x):
-        """
-        可选：使用简单的 K-Means 初始化 codebook（每层）
-        """
-        from sklearn.cluster import KMeans
-        x_np = x.detach().cpu().numpy()
-        for l in range(self.num_levels):
-            kmeans = KMeans(n_clusters=self.codebook_size, n_init=1, max_iter=self.kmeans_iters)
-            kmeans.fit(x_np)
-            centroids = torch.Tensor(kmeans.cluster_centers_)  # (K, D)
-            centroids_np = centroids.numpy()    
-            with torch.no_grad():
-                self.codebooks[l].copy_(centroids)
-            # 更新 residual
-            labels = kmeans.predict(x_np)
-            x_np = x_np - centroids_np[labels]
+        # 重建并更新残差
+        quantized = C[idx]          # [N,D]
+        residual = residual - quantized
 
-# 使用示例
-if __name__ == "__main__":
-    B, D = 128, 64
-    x = torch.randn(B, D)
-    model = RQKMeans(dim=D, num_levels=3, codebook_size=64)
-    # 可选初始化
-    model.kmeans_init(x)
+    # 最终重建 = 所有量化向量之和
+    X_rec = codebooks[range(S), indices].sum(1)   # [N,D]
+    return codebooks, indices, X_rec
 
-    recon, codes = model(x)
-    loss = F.mse_loss(recon, x)
-    loss.backward()
-    print("重构误差:", loss.item())
-    print("编码索引形状:", codes.shape)
+
+# 随机数据
+X = np.random.randn(1000, 64).astype(np.float32)
+
+codebooks, indices, X_rec = rq_kmeans(X, K=128, S=4)
+
+# 计算重建误差
+mse = ((X - X_rec)**2).mean()
+print("RQ-KMeans MSE:", mse)
+
