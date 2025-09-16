@@ -1,17 +1,17 @@
 import numpy as np
 
-def train(rate, x,w1, b1, w2,b2):
-    layer1 = np.maximum(0, np.dot(w1, x) + b1)
-    #伯努利分布
-    mask1 = np.random.binomial(1, 1-rate, layer1.shape)
-    layer1 = layer1*mask1
-    layer2 = np.maximum(0, np.dot(w2, layer1) + b2)
-    mask2 = np.random.binomial(1, 1-rate, layer2.shape)
-    layer2 = layer2*mask2
-    return layer2
-def test(rate,x, w1,b1,w2,b2):
-    layer1 = np.maximum(0, np.dot(w1, x) + b1)
-    layer1 = layer1*(1-rate)
-    layer2 = np.maximum(0, np.dot(w2, layer1) + b2)
-    layer2 = layer2*(1-rate)
-    return layer2
+def dropout(x, rate, train=True):
+    if train:
+        # inverted dropout：训练时直接放大
+        mask = np.random.binomial(1, 1-rate, size=x.shape) / (1-rate)
+        return x * mask
+    else:
+        # 测试时无需任何缩放
+        return x
+
+def forward(x, w1, b1, w2, b2, rate, train=True):
+    h1 = np.maximum(0, np.dot(w1, x) + b1)
+    h1 = dropout(h1, rate, train=train)
+    h2 = np.maximum(0, np.dot(w2, h1) + b2)
+    h2 = dropout(h2, rate, train=train)
+    return h2
